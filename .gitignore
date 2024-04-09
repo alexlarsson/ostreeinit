@@ -1,0 +1,4 @@
+image.qcow2
+init
+ostree-initrd.img
+vmlinuz
