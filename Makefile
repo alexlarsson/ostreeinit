@@ -7,9 +7,8 @@ OSTREE_DEPLOYMENT=0b257ba185126d152559cb7395bb9dde2bc4a600687264facd600eebe504ec
 init: init.c
 	gcc -O2 -Wall init.c -o init
 
-ostree-initrd.img: init initrd_files.txt
-	echo init  | cpio  -H newc -o -O ostree-initrd.img
-	cat initrd_files.txt | cpio -D /  -L -H newc -o -A -O ostree-initrd.img
+ostree-initrd.img: init ostreeinit_mkinitrd.sh
+	./ostreeinit_mkinitrd.sh ostree-initrd.img init
 
 clean:
 	rm -f init ostree-initrd.img
