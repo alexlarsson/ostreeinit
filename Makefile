@@ -2,7 +2,7 @@ all: init ostree-initrd.img
 
 IMAGE=image.qcow2
 KERNEL=vmlinuz
-OSTREE_DEPLOYMENT=2bbf6181ee898377f6138d5f2ae6cf305e0643d266924238c63b6c1e559cd697
+OSTREE_DEPLOYMENT=0b257ba185126d152559cb7395bb9dde2bc4a600687264facd600eebe504eca5
 
 init: init.c
 	gcc -O2 -Wall init.c -o init
