@@ -371,11 +371,11 @@ main (int argc, char *argv[])
     klog ("Failed to mkdir sysroot: %s\n", strerror (errno));
 
   autofree char *cmdline = read_proc_cmdline ();
-  autofree char *root = find_proc_cmdline_key (cmdline, "root");
+  autofree char *root = find_proc_cmdline_key (cmdline, "ostreeinit.root");
   if (!root)
     fatal ("Can't find root= kernel commandline argument");
 
-  autofree char *rootfstype = find_proc_cmdline_key (cmdline, "rootfstype");
+  autofree char *rootfstype = find_proc_cmdline_key (cmdline, "ostreeinit.rootfstype");
   if (!rootfstype)
     {
       klog ("Can't find rootfstype= kernel commandline argument, assuming ext4");
