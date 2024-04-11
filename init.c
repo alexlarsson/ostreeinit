@@ -222,6 +222,59 @@ static void exec_init(void) {
   execl_single_arg("/bin/sh");
 }
 
+static char *
+read_proc_cmdline (void)
+{
+  autofclose FILE *f = fopen ("/proc/cmdline", "r");
+  if (!f) {
+    print("Failed to open /proc/cmdline");
+    exit(1);
+  }
+
+  char *cmdline = NULL;
+  size_t len;
+
+  /* Note that /proc/cmdline will not end in a newline, so getline
+   * will fail unelss we provide a length.
+   */
+  if (getline (&cmdline, &len, f) < 0) {
+    print("Failed to read /proc/cmdline");
+    exit(1);
+  }
+
+  /* ... but the length will be the size of the malloc buffer, not
+   * strlen().  Fix that.
+   */
+  len = strlen (cmdline);
+  if (cmdline[len - 1] == '\n')
+    cmdline[len - 1] = '\0';
+
+  return cmdline;
+}
+
+static char *
+find_proc_cmdline_key (const char *cmdline, const char *key)
+{
+  const size_t key_len = strlen (key);
+  for (const char *iter = cmdline; iter;) {
+    const char *next = strchr (iter, ' ');
+    if (strncmp (iter, key, key_len) == 0 && iter[key_len] == '=') {
+      const char *start = iter + key_len + 1;
+      if (next)
+        return strndup (start, next - start);
+
+      return strdup (start);
+    }
+
+    if (next)
+      next += strspn (next, " ");
+
+    iter = next;
+  }
+
+  return NULL;
+}
+
 int main(int argc, char* argv[]) {
   (void)argv;
 
@@ -239,7 +292,20 @@ int main(int argc, char* argv[]) {
     print("Failed to mkdir sysroot: %s\n", strerror(errno));
 
   // TODO: Extract source device and fs type from /proc/cmdline
-  if (mount("/dev/vda3", "/sysroot", "ext4", MS_RDONLY, NULL) != 0)
+  autofree char *cmdline = read_proc_cmdline();
+  autofree char *bootdev = find_proc_cmdline_key (cmdline, "bootdev");
+  if (!bootdev) {
+    print("Can't find bootdev= kernel commandline argument");
+    exit(1);
+  }
+
+  autofree char *bootfs=find_proc_cmdline_key (cmdline, "bootfs");
+  if (!bootfs) {
+    print("Can't find bootfs= kernel commandline argument");
+    exit(1);
+  }
+
+  if (mount(bootdev, "/sysroot", bootfs, MS_RDONLY, NULL) != 0)
     print("Failed to mount sysroot: %s\n", strerror(errno));
 
   char *arg[] = { "/usr/lib/ostree/ostree-prepare-root", "/sysroot", NULL};

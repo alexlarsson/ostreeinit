@@ -22,6 +22,6 @@ ${KERNEL}:
 	echo Extract the kernel from ${IMAGE} and save it here as ${KERNEL}
 	exit 1
 
-KARGS="loglevel=6 console=ttyS0  ostree=/ostree/boot.1/centos/${OSTREE_DEPLOYMENT}/0"
+KARGS="loglevel=6 console=ttyS0  bootdev=/dev/vda3 bootfs=ext4 ostree=/ostree/boot.1/centos/${OSTREE_DEPLOYMENT}/0"
 run: ${IMAGE} ${KERNEL} ostreeinit ostree-initrd.img
 	qemu-system-x86_64 -nographic -kernel ${KERNEL} -initrd ostree-initrd.img -enable-kvm -m 2G -cpu host -drive file=${IMAGE},index=0,media=disk,format=qcow2,if=virtio,snapshot=off -append ${KARGS}
