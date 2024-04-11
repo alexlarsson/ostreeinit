@@ -22,7 +22,7 @@ by specifying the required arguments on the kernel command line.
 
 The supported kernel args are:
     * root= - The device node to mount the rootfs from (e.g. root=/dev/vda3). This is required.
-    * rootfs= - The filesystem type used in the mount, if unspecified `rootfs=ext4` is used.
+    * rootfstype= - The filesystem type used in the mount, if unspecified `rootfs=ext4` is used.
 
 In addition, ostree-prepare-root needs the standard `ostree=` argument
 to be set, so that ostree can tell what deploy to boot.

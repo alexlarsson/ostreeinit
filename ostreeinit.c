@@ -375,15 +375,15 @@ main (int argc, char *argv[])
   if (!root)
     fatal ("Can't find root= kernel commandline argument");
 
-  autofree char *rootfs = find_proc_cmdline_key (cmdline, "rootfs");
-  if (!rootfs)
+  autofree char *rootfstype = find_proc_cmdline_key (cmdline, "rootfstype");
+  if (!rootfstype)
     {
-      klog ("Can't find rootfs= kernel commandline argument, assuming ext4");
-      rootfs = xstrdup ("ext4");
+      klog ("Can't find rootfstype= kernel commandline argument, assuming ext4");
+      rootfstype = xstrdup ("ext4");
     }
 
-  if (mount (root, "/sysroot", rootfs, MS_RDONLY, NULL) != 0)
-    fatal ("Failed to mount %s at sysroot (fs %s): %s\n", root, rootfs, strerror (errno));
+  if (mount (root, "/sysroot", rootfstype, MS_RDONLY, NULL) != 0)
+    fatal ("Failed to mount %s at sysroot (fs %s): %s\n", root, rootfstype, strerror (errno));
 
   char *arg[] = { "/usr/lib/ostree/ostree-prepare-root", "/sysroot", NULL };
   fork_execvp (arg);
