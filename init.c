@@ -107,23 +107,21 @@ static void fatal(const char *format, ...)
   exit (1);
 }
 
-#define fork_execvp(exe)                 \
-  do {                                                \
-    printd("fork_execvp(%s)\n", exe[0]);  \
-    const pid_t pid = fork();                         \
-    if (pid == -1) {                                  \
-      klog("fail execvp_no_wait\n");                   \
-      break;                                          \
-    } else if (pid > 0) {                             \
-      printd("forked %d fork_execvp\n", pid); \
-      waitpid(pid, 0, 0);                      \
-      break;                                          \
-    }                                                 \
-                                                      \
-    execvp(exe[0], exe);                              \
-    exit(errno);                                      \
-  } while (0)
+static void fork_execvp(char **args)
+{
+    printd("fork_execvp(%s)\n", args[0]);
+    const pid_t pid = fork();
+    if (pid == -1)
+      fatal("fail execvp_no_wait\n");
 
+    if (pid == 0) {
+      /* In child */
+      execvp(args[0], args);
+      exit(errno);
+    }
+
+    waitpid(pid, 0, 0);
+}
 
 /* remove all files/directories below dirName -- don't cross mountpoints */
 /* Closes the fd, via fdopendir */
