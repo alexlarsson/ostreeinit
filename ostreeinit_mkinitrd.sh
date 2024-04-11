@@ -52,8 +52,12 @@ done
 
 D=$(mktemp -d)
 cp $OSTREEINIT $D/init
-echo init  | cpio -D $D  -H newc -o -O $DEST
-rm -rf $D
+
+echo init  | cpio -D $D  -H newc -o -O $D/initrd
 for file in "${files[@]}"; do
     echo $file;
-done | cpio -D /  -L -H newc -o -A -O $DEST
+done | cpio -D /  -L -H newc -o -A -O $D/initrd
+
+gzip -c $D/initrd > $DEST
+
+rm -rf $D
