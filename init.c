@@ -84,7 +84,7 @@ static void klog(const char *format, ...)
 }
 
 __attribute__((__format__ (printf, 1, 2)))
-static void printd(const char *format, ...)
+static void debug(const char *format, ...)
 {
 #ifdef DEBUG
   va_list args;
@@ -109,7 +109,7 @@ static void fatal(const char *format, ...)
 
 static void fork_execvp(char **args)
 {
-    printd("fork_execvp(%s)\n", args[0]);
+    debug("fork_execvp(%s)\n", args[0]);
     const pid_t pid = fork();
     if (pid == -1)
       fatal("fail execvp_no_wait\n");
@@ -213,7 +213,7 @@ static int switchroot(const char* newroot) {
 }
 
 static void do_move_mount(const char* oldmount, const char *newmount) {
-  printd("mount(\"%s\", \"%s\", NULL, MS_MOVE, NULL)\n",
+  debug("mount(\"%s\", \"%s\", NULL, MS_MOVE, NULL)\n",
          oldmount, newmount);
   if (mount(oldmount, newmount, NULL, MS_MOVE, NULL) < 0)
     fatal("failed to mount moving %s to %s, forcing unmount\n",
@@ -226,7 +226,7 @@ static void do_unmount(const char* oldmount) {
 }
 
 static void mount_apifs(const char *type, const char *dst, unsigned long mountflags, const char *options) {
-  printd("mount(\"%s\", \"%s\", \"%s\", %ld, %s) %d (%s)\n",
+  debug("mount(\"%s\", \"%s\", \"%s\", %ld, %s) %d (%s)\n",
         type, dst, type, mountflags, options, errno, strerror(errno));
   if (mount(type, dst, type,mountflags, options) < 0)
     fatal("mount of %s failed: %s\n", type, strerror(errno));
@@ -244,7 +244,7 @@ static FILE* log_open_kmsg(void) {
 }
 
 static void execl_single_arg(const char* exe) {
-  printd("execl_single_arg(\"%s\")\n", exe);
+  debug("execl_single_arg(\"%s\")\n", exe);
   execl(exe, exe, (char*)NULL);
 }
 
@@ -320,7 +320,6 @@ int main(int argc, char* argv[]) {
   if (mkdir("/sysroot", 0755) < 0)
     klog("Failed to mkdir sysroot: %s\n", strerror(errno));
 
-  // TODO: Extract source device and fs type from /proc/cmdline
   autofree char *cmdline = read_proc_cmdline();
   autofree char *bootdev = find_proc_cmdline_key (cmdline, "bootdev");
   if (!bootdev)
