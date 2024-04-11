@@ -140,6 +140,7 @@ fork_execvp (char **args)
 static int
 recursive_rm (int dfd, int st_dev)
 {
+  int result = 0;
   autoclosedir DIR *dir = fdopendir (dfd);
   if (!dir)
     {
@@ -168,7 +169,8 @@ recursive_rm (int dfd, int st_dev)
       if (fstatat (dfd, d->d_name, &sb, AT_SYMLINK_NOFOLLOW))
         {
           klog ("stat of %s failed\n", d->d_name);
-          return -1;
+          result = -1;
+          continue;
         }
 
       /* skip if device is not the same */
@@ -180,17 +182,26 @@ recursive_rm (int dfd, int st_dev)
         {
           const int cfd = openat (dfd, d->d_name, O_RDONLY);
           if (cfd >= 0)
-            recursive_rm (cfd, st_dev); /* it closes cfd too */
+            {
+              /* Note: recursive_rm closes cfd */
+              if (recursive_rm (cfd, st_dev) < 0)
+                result = -1;
+            }
+          else
+            {
+              klog ("Failed to open %s\n", d->d_name);
+              result = -1;
+            }
         }
 
       if (unlinkat (dfd, d->d_name, isdir ? AT_REMOVEDIR : 0) < 0)
         {
           klog ("failed to unlink %s\n", d->d_name);
-          return -1;
+          result = -1;
         }
     }
 
-  return 0;
+  return result;
 }
 
 static int
