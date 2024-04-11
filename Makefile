@@ -13,4 +13,4 @@ install: ostreeinit
 	install -t $(DESTDIR)$(LIBDIR) ostreeinit ostreeinit_mkinitrd.sh
 
 clang-format:
-	git ls-files | grep -Ee "\\.[hc]" | xargs clang-format -style=file -i
+	git ls-files | grep -Ee "\\.[hc]$$" | xargs clang-format -style=file -i
