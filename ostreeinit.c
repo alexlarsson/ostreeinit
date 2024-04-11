@@ -117,6 +117,21 @@ fatal (const char *format, ...)
   exit (1);
 }
 
+__attribute__ ((__noreturn__)) static void
+oom ()
+{
+  fatal ("Out of memory");
+}
+
+static char *
+xstrdup (const char *str)
+{
+  char *dup = strdup (str);
+  if (dup == NULL)
+    oom ();
+  return dup;
+}
+
 static void
 fork_execvp (char **args)
 {
@@ -356,16 +371,19 @@ main (int argc, char *argv[])
     klog ("Failed to mkdir sysroot: %s\n", strerror (errno));
 
   autofree char *cmdline = read_proc_cmdline ();
-  autofree char *bootdev = find_proc_cmdline_key (cmdline, "bootdev");
-  if (!bootdev)
-    fatal ("Can't find bootdev= kernel commandline argument");
+  autofree char *root = find_proc_cmdline_key (cmdline, "root");
+  if (!root)
+    fatal ("Can't find root= kernel commandline argument");
 
-  autofree char *bootfs = find_proc_cmdline_key (cmdline, "bootfs");
-  if (!bootfs)
-    fatal ("Can't find bootfs= kernel commandline argument");
+  autofree char *rootfs = find_proc_cmdline_key (cmdline, "rootfs");
+  if (!rootfs)
+    {
+      klog ("Can't find rootfs= kernel commandline argument, assuming ext4");
+      rootfs = xstrdup ("ext4");
+    }
 
-  if (mount (bootdev, "/sysroot", bootfs, MS_RDONLY, NULL) != 0)
-    fatal ("Failed to mount sysroot: %s\n", strerror (errno));
+  if (mount (root, "/sysroot", rootfs, MS_RDONLY, NULL) != 0)
+    fatal ("Failed to mount %s at sysroot (fs %s): %s\n", root, rootfs, strerror (errno));
 
   char *arg[] = { "/usr/lib/ostree/ostree-prepare-root", "/sysroot", NULL };
   fork_execvp (arg);

@@ -1,7 +1,7 @@
 IMAGE=image.qcow2
 KERNEL=vmlinuz
 OSTREE_DEPLOYMENT=0b257ba185126d152559cb7395bb9dde2bc4a600687264facd600eebe504eca5
-KARGS="loglevel=6 console=ttyS0  bootdev=/dev/vda3 bootfs=ext4 ostree=/ostree/boot.1/centos/${OSTREE_DEPLOYMENT}/0"
+KARGS="loglevel=6 console=ttyS0  root=/dev/vda3 rootfs=ext4 ostree=/ostree/boot.1/centos/${OSTREE_DEPLOYMENT}/0"
 
 ${IMAGE}:
 	echo Build an image (e.g. cs9-qemu-developer-ostree.x86_64.qcow2) and save it here as ${IMAGE}
