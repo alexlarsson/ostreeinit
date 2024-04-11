@@ -1,17 +1,17 @@
-all: init ostree-initrd.img
+all: ostreeinit ostree-initrd.img
 
 IMAGE=image.qcow2
 KERNEL=vmlinuz
 OSTREE_DEPLOYMENT=0b257ba185126d152559cb7395bb9dde2bc4a600687264facd600eebe504eca5
 
-init: init.c
-	gcc -O2 -Wall init.c -o init
+ostreeinit: init.c
+	gcc -O2 -Wall init.c -o ostreeinit
 
 ostree-initrd.img: init ostreeinit_mkinitrd.sh
-	./ostreeinit_mkinitrd.sh ostree-initrd.img init
+	./ostreeinit_mkinitrd.sh ostree-initrd.img ostreeinit
 
 clean:
-	rm -f init ostree-initrd.img
+	rm -f ostreeinit ostree-initrd.img
 
 ${IMAGE}:
 	echo Build an image (e.g. cs9-qemu-developer-ostree.x86_64.qcow2) and save it here as ${IMAGE}
@@ -23,5 +23,5 @@ ${KERNEL}:
 	exit 1
 
 KARGS="loglevel=6 console=ttyS0  ostree=/ostree/boot.1/centos/${OSTREE_DEPLOYMENT}/0"
-run: ${IMAGE} ${KERNEL} init ostree-initrd.img
+run: ${IMAGE} ${KERNEL} ostreeinit ostree-initrd.img
 	qemu-system-x86_64 -nographic -kernel ${KERNEL} -initrd ostree-initrd.img -enable-kvm -m 2G -cpu host -drive file=${IMAGE},index=0,media=disk,format=qcow2,if=virtio,snapshot=off -append ${KARGS}
