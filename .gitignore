@@ -1,4 +1,4 @@
 image.qcow2
-init
+ostreeinit
 ostree-initrd.img
 vmlinuz
