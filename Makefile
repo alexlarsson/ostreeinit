@@ -2,8 +2,8 @@ all: ostreeinit
 
 LIBDIR=/usr/lib/ostreeinit
 
-ostreeinit: init.c
-	gcc -O2 -Wall init.c -o ostreeinit
+ostreeinit: ostreeinit.c
+	gcc -O2 -Wall ostreeinit.c -o ostreeinit
 
 clean:
 	rm -f ostreeinit ostree-initrd.img
