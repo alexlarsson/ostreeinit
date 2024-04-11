@@ -1,6 +1,7 @@
 all: ostreeinit
 
 LIBDIR=/usr/lib/ostreeinit
+BINDIR=/usr/bin
 
 ostreeinit: ostreeinit.c
 	gcc -O2 -Wall ostreeinit.c -o ostreeinit
@@ -10,7 +11,9 @@ clean:
 
 install: ostreeinit
 	mkdir -p $(DESTDIR)$(LIBDIR)
-	install -t $(DESTDIR)$(LIBDIR) ostreeinit ostreeinit_mkinitrd.sh
+	mkdir -p $(DESTDIR)$(BINDIR)
+	install -t $(DESTDIR)$(LIBDIR) ostreeinit
+	install -t $(DESTDIR)$(BINDIR) ostreeinit-mkinitrd
 
 clang-format:
 	git ls-files | grep -Ee "\\.[hc]$$" | xargs clang-format -style=file -i
