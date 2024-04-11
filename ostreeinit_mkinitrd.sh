@@ -1,7 +1,14 @@
 #!/usr/bin/bash
 
 DEST=$1
-OSTREEINIT=$2
+shift
+
+OSTREEINIT="$1"
+if [ -z "$OSTREEINIT" ]; then
+    # Default to packaged file
+    OSTREEINIT="/usr/lib/ostreeinit/ostreeinit"
+fi
+shift
 
 set -e
 
