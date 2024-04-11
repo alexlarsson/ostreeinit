@@ -204,51 +204,32 @@ recursive_rm (int dfd, int st_dev)
   return result;
 }
 
-static int
+static void
 switchroot (const char *newroot)
 {
   if (chdir (newroot))
-    {
-      klog ("failed to change directory to %s", newroot);
-      return -1;
-    }
+    fatal ("failed to change directory to %s", newroot);
 
   autoclose int cfd = open ("/", O_RDONLY | O_CLOEXEC);
   if (cfd < 0)
-    {
-      klog ("cannot open %s", "/");
-      return -1;
-    }
+    fatal ("cannot open %s", "/");
 
   if (mount (newroot, "/", NULL, MS_MOVE, NULL) < 0)
-    {
-      klog ("failed to mount moving %s to /\n", newroot);
-      return -1;
-    }
+    fatal ("failed to mount moving %s to /\n", newroot);
 
   if (chroot ("."))
-    {
-      klog ("failed to change root\n");
-      return -1;
-    }
+    fatal ("failed to change root\n");
 
   if (chdir ("/"))
-    {
-      klog ("cannot change directory to %s\n", "/");
-      return -1;
-    }
+    fatal ("cannot change directory to %s\n", "/");
 
   struct stat rb;
   if (fstat (cfd, &rb))
-    {
-      klog ("stat failed\n");
-      return -1;
-    }
+    fatal ("stat failed\n");
 
+  /* We ignore errors here, that just means some leaks, its not fatal */
   recursive_rm (cfd, rb.st_dev);
   cfd = -1; /* The fd is closed by recursive_rm */
-
-  return 0;
 }
 
 static void
@@ -282,7 +263,7 @@ log_open_kmsg (void)
   if (!kmsg_f)
     {
       klog ("open(\"/dev/kmsg\", \"w\"), %d = errno\n", errno);
-      return kmsg_f;
+      return NULL;
     }
 
   setvbuf (kmsg_f, 0, _IOLBF, 0);
@@ -396,8 +377,7 @@ main (int argc, char *argv[])
   do_unmount ("/proc");
   do_unmount ("/sys");
 
-  if (switchroot ("/sysroot") < 0)
-    fatal ("Failed to switchroot to /sysroot\n");
+  switchroot ("/sysroot");
 
   // execl_single_arg("/bin/bash");
 
