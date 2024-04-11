@@ -12,12 +12,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 #include <sys/mount.h>
 #include <sys/stat.h>
 #include <sys/syscall.h>
 #include <sys/utsname.h>
 #include <sys/vfs.h>
 #include <sys/wait.h>
+
+#if 1
+#define DEBUG
+#endif
 
 #define autofree __attribute__((cleanup(cleanup_free)))
 #define autofree_str __attribute__((cleanup(cleanup_free_str)))
@@ -46,32 +51,68 @@ static inline void cleanup_closedir(DIR** dir) {
 
 static FILE* kmsg_f = 0;
 
-#define print(...)                                   \
-  do {                                               \
-    if (kmsg_f) {                                    \
-      fprintf(kmsg_f, "ostreeinit: " __VA_ARGS__); \
-      break;                                         \
-    }                                                \
-                                                     \
-    printf(__VA_ARGS__);                             \
-  } while (0)
+#define LOG_PREFIX "ostreeinit: "
+#define LOG_PREFIX_LEN strlen(LOG_PREFIX)
 
-#if 1
-#define DEBUG
-#define printd(...)     \
-  do {                  \
-    print(__VA_ARGS__); \
-  } while (0)
-#else
-#define printd(...)
+static void klogv(char const *format,
+                 va_list      args)
+{
+  if (kmsg_f) {
+    // Don't malloc here, because the alloc failure uses this
+    size_t format_len = strlen(format);
+    char *prefixed_format = alloca(LOG_PREFIX_LEN + format_len + 1);
+    if (prefixed_format != NULL)
+      {
+        memcpy(prefixed_format, LOG_PREFIX, LOG_PREFIX_LEN);
+        memcpy(prefixed_format + LOG_PREFIX_LEN, format, format_len + 1);
+        format = prefixed_format;
+      }
+    vfprintf(kmsg_f, format, args);
+  } else {
+    vprintf(format, args);
+  }
+}
+
+__attribute__((__format__ (printf, 1, 2)))
+static void klog(const char *format, ...)
+{
+  va_list args;
+
+  va_start (args, format);
+  klogv(format, args);
+  va_end (args);
+}
+
+__attribute__((__format__ (printf, 1, 2)))
+static void printd(const char *format, ...)
+{
+#ifdef DEBUG
+  va_list args;
+  va_start (args, format);
+  klogv(format, args);
+  va_end (args);
 #endif
+}
+
+__attribute__ ((__noreturn__))
+__attribute__((__format__ (printf, 1, 2)))
+static void fatal(const char *format, ...)
+{
+  va_list args;
+
+  va_start (args, format);
+  klogv(format, args);
+  va_end (args);
+
+  exit (1);
+}
 
 #define fork_execvp(exe)                 \
   do {                                                \
     printd("fork_execvp(%s)\n", exe[0]);  \
     const pid_t pid = fork();                         \
     if (pid == -1) {                                  \
-      print("fail execvp_no_wait\n");                 \
+      klog("fail execvp_no_wait\n");                   \
       break;                                          \
     } else if (pid > 0) {                             \
       printd("forked %d fork_execvp\n", pid); \
@@ -89,7 +130,7 @@ static FILE* kmsg_f = 0;
 static int recursive_rm(int dfd, int st_dev) {
   autoclosedir DIR* dir = fdopendir(dfd);
   if (!dir) {
-    print("failed to open directory\n");
+    klog("failed to open directory\n");
     return -1;
   }
 
@@ -98,7 +139,7 @@ static int recursive_rm(int dfd, int st_dev) {
     struct dirent* d = readdir(dir);
     if (!d) {
       if (errno) {
-        print("failed to read directory\n");
+        klog("failed to read directory\n");
         return -1;
       }
       break;
@@ -109,7 +150,7 @@ static int recursive_rm(int dfd, int st_dev) {
 
     struct stat sb;
     if (fstatat(dfd, d->d_name, &sb, AT_SYMLINK_NOFOLLOW)) {
-      print("stat of %s failed\n", d->d_name);
+      klog("stat of %s failed\n", d->d_name);
       return -1;
     }
 
@@ -125,7 +166,7 @@ static int recursive_rm(int dfd, int st_dev) {
     }
 
     if (unlinkat(dfd, d->d_name, isdir ? AT_REMOVEDIR : 0) < 0) {
-      print("failed to unlink %s\n", d->d_name);
+      klog("failed to unlink %s\n", d->d_name);
       return -1;
     }
   }
@@ -135,35 +176,35 @@ static int recursive_rm(int dfd, int st_dev) {
 
 static int switchroot(const char* newroot) {
   if (chdir(newroot)) {
-    print("failed to change directory to %s", newroot);
+    klog("failed to change directory to %s", newroot);
     return -1;
   }
 
   autoclose int cfd = open("/", O_RDONLY | O_CLOEXEC);
   if (cfd < 0) {
-    print("cannot open %s", "/");
+    klog("cannot open %s", "/");
     return -1;
   }
 
   if (mount(newroot, "/", NULL, MS_MOVE, NULL) < 0) {
-    print("failed to mount moving %s to /\n", newroot);
+    klog("failed to mount moving %s to /\n", newroot);
     return -1;
   }
 
   if (chroot(".")) {
-    print("failed to change root\n");
+    klog("failed to change root\n");
     return -1;
   }
 
   if (chdir("/")) {
-    print("cannot change directory to %s\n", "/");
+    klog("cannot change directory to %s\n", "/");
     return -1;
   }
 
 
   struct stat rb;
   if (fstat(cfd, &rb)) {
-    print("stat failed\n");
+    klog("stat failed\n");
     return -1;
   }
 
@@ -176,33 +217,27 @@ static int switchroot(const char* newroot) {
 static void do_move_mount(const char* oldmount, const char *newmount) {
   printd("mount(\"%s\", \"%s\", NULL, MS_MOVE, NULL)\n",
          oldmount, newmount);
-  if (mount(oldmount, newmount, NULL, MS_MOVE, NULL) < 0) {
-    print("failed to mount moving %s to %s, forcing unmount\n",
+  if (mount(oldmount, newmount, NULL, MS_MOVE, NULL) < 0)
+    fatal("failed to mount moving %s to %s, forcing unmount\n",
           oldmount, newmount);
-    exit(1);
-  }
 }
 
 static void do_unmount(const char* oldmount) {
-  if (umount2(oldmount, MNT_DETACH) < 0) {
-    print("Failed to unmount %s: %s\n", oldmount, strerror(errno));
-    exit(1);
-  }
+  if (umount2(oldmount, MNT_DETACH) < 0)
+    fatal("Failed to unmount %s: %s\n", oldmount, strerror(errno));
 }
 
 static void mount_apifs(const char *type, const char *dst, unsigned long mountflags, const char *options) {
   printd("mount(\"%s\", \"%s\", \"%s\", %ld, %s) %d (%s)\n",
         type, dst, type, mountflags, options, errno, strerror(errno));
-  if (mount(type, dst, type,mountflags, options) < 0) {
-    print("mount of %s failed: %s\n", type, strerror(errno));
-    exit(1);
-  }
+  if (mount(type, dst, type,mountflags, options) < 0)
+    fatal("mount of %s failed: %s\n", type, strerror(errno));
 }
 
 static FILE* log_open_kmsg(void) {
   kmsg_f = fopen("/dev/kmsg", "w");
   if (!kmsg_f) {
-    print("open(\"/dev/kmsg\", \"w\"), %d = errno\n", errno);
+    klog("open(\"/dev/kmsg\", \"w\"), %d = errno\n", errno);
     return kmsg_f;
   }
 
@@ -226,10 +261,8 @@ static char *
 read_proc_cmdline (void)
 {
   autofclose FILE *f = fopen ("/proc/cmdline", "r");
-  if (!f) {
-    print("Failed to open /proc/cmdline");
-    exit(1);
-  }
+  if (!f)
+    fatal("Failed to open /proc/cmdline");
 
   char *cmdline = NULL;
   size_t len;
@@ -237,10 +270,8 @@ read_proc_cmdline (void)
   /* Note that /proc/cmdline will not end in a newline, so getline
    * will fail unelss we provide a length.
    */
-  if (getline (&cmdline, &len, f) < 0) {
-    print("Failed to read /proc/cmdline");
-    exit(1);
-  }
+  if (getline (&cmdline, &len, f) < 0)
+    fatal("Failed to read /proc/cmdline");
 
   /* ... but the length will be the size of the malloc buffer, not
    * strlen().  Fix that.
@@ -289,24 +320,20 @@ int main(int argc, char* argv[]) {
   mount_apifs("tmpfs", "/run", MS_NOSUID | MS_NODEV, "mode=0755,size=64m");
 
   if (mkdir("/sysroot", 0755) < 0)
-    print("Failed to mkdir sysroot: %s\n", strerror(errno));
+    klog("Failed to mkdir sysroot: %s\n", strerror(errno));
 
   // TODO: Extract source device and fs type from /proc/cmdline
   autofree char *cmdline = read_proc_cmdline();
   autofree char *bootdev = find_proc_cmdline_key (cmdline, "bootdev");
-  if (!bootdev) {
-    print("Can't find bootdev= kernel commandline argument");
-    exit(1);
-  }
+  if (!bootdev)
+    fatal("Can't find bootdev= kernel commandline argument");
 
   autofree char *bootfs=find_proc_cmdline_key (cmdline, "bootfs");
-  if (!bootfs) {
-    print("Can't find bootfs= kernel commandline argument");
-    exit(1);
-  }
+  if (!bootfs)
+    fatal("Can't find bootfs= kernel commandline argument");
 
   if (mount(bootdev, "/sysroot", bootfs, MS_RDONLY, NULL) != 0)
-    print("Failed to mount sysroot: %s\n", strerror(errno));
+    fatal("Failed to mount sysroot: %s\n", strerror(errno));
 
   char *arg[] = { "/usr/lib/ostree/ostree-prepare-root", "/sysroot", NULL};
   fork_execvp(arg);
@@ -318,10 +345,8 @@ int main(int argc, char* argv[]) {
   do_unmount("/proc");
   do_unmount("/sys");
 
-  if (switchroot("/sysroot") < 0) {
-    print("Failed to switchroot to /sysroot\n");
-    exit(1);
-  }
+  if (switchroot("/sysroot") < 0)
+    fatal("Failed to switchroot to /sysroot\n");
 
   //execl_single_arg("/bin/bash");
 
