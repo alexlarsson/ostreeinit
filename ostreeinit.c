@@ -373,12 +373,12 @@ main (int argc, char *argv[])
   autofree char *cmdline = read_proc_cmdline ();
   autofree char *root = find_proc_cmdline_key (cmdline, "ostreeinit.root");
   if (!root)
-    fatal ("Can't find root= kernel commandline argument");
+    fatal ("Can't find ostreeinit.root= kernel commandline argument");
 
   autofree char *rootfstype = find_proc_cmdline_key (cmdline, "ostreeinit.rootfstype");
   if (!rootfstype)
     {
-      klog ("Can't find rootfstype= kernel commandline argument, assuming ext4");
+      klog ("Can't find ostreeinit.rootfstype= kernel commandline argument, assuming ext4");
       rootfstype = xstrdup ("ext4");
     }
 
