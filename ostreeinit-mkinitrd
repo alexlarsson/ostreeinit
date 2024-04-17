@@ -65,6 +65,6 @@ for file in "${files[@]}"; do
     echo $file;
 done | cpio -D /  -L -H newc -o -A -O $D/initrd
 
-gzip -c $D/initrd > $DEST
+lz4 -l -9 -c $D/initrd > $DEST
 
 rm -rf $D
