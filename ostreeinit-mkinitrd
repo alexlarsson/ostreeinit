@@ -109,12 +109,15 @@ for bin in $BINS; do
 done
 
 D=$(mktemp -d)
-cp $OSTREEINIT $D/init
 
-echo init  | cpio -D $D  -H newc -o -O $D/initrd
+# Add files
 for file in "${files[@]}"; do
     echo $file;
-done | cpio -D /  -L -H newc -o -A -O $D/initrd
+done | cpio -D /  -L -H newc -o -O $D/initrd
+
+# Add initrd
+cp $OSTREEINIT $D/init
+echo init  | cpio -D $D  -H newc -o -A -O $D/initrd
 
 lz4 -l -9 -c $D/initrd > $DEST
 
