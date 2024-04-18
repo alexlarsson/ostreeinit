@@ -22,5 +22,8 @@ install: ostreeinit
 dist:
 	git archive --prefix=ostreeinit-${VERSION}/ --output=ostreeinit-${VERSION}.tar.gz HEAD
 
+initramfs:
+	dracut -f -M -m ostreeinit -o nss-softokn
+
 clang-format:
 	git ls-files | grep -Ee "\\.[hc]$$" | xargs clang-format -style=file -i
