@@ -351,6 +351,32 @@ find_proc_cmdline_key (const char *cmdline, const char *key)
   return NULL;
 }
 
+static bool
+has_proc_cmdline_flag (const char *cmdline, const char *key)
+{
+  const size_t key_len = strlen (key);
+  for (const char *iter = cmdline; iter;)
+    {
+      const char *next = strchr (iter, ' ');
+      size_t val_len = 0;
+
+      if (next)
+        val_len = next - iter;
+      else
+        val_len = strlen (iter);
+
+      if (val_len == key_len && strncmp (iter, key, key_len) == 0)
+        return true;
+
+      if (next)
+        next += strspn (next, " ");
+
+      iter = next;
+    }
+
+  return false;
+}
+
 int
 main (int argc, char *argv[])
 {
@@ -385,8 +411,12 @@ main (int argc, char *argv[])
       rootfstype = xstrdup ("ext4");
     }
 
-  if (mount (root, "/sysroot", rootfstype, MS_RDONLY, NULL) != 0)
-    fatal ("Failed to mount %s at sysroot (fs %s): %s\n", root, rootfstype, strerror (errno));
+  int sysroot_mount_flags = 0;
+  if (!has_proc_cmdline_flag (cmdline, "ostreeinit.rw"))
+    sysroot_mount_flags |= MS_RDONLY;
+  if (mount (root, "/sysroot", rootfstype, sysroot_mount_flags, NULL) != 0)
+    fatal ("Failed to mount %s at sysroot (fs %s, flags: %d): %s\n", root, rootfstype,
+           sysroot_mount_flags, strerror (errno));
 
   char *arg[] = { "/usr/lib/ostree/ostree-prepare-root", "/sysroot", NULL };
   fork_execvp (arg);
