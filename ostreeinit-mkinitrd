@@ -4,6 +4,7 @@ set -e
 
 OSTREEINIT="/usr/lib/ostreeinit/ostreeinit"
 extra_files=()
+SYSROOT=/
 
 echoerr() { echo "$@" 1>&2; }
 
@@ -17,9 +18,10 @@ usage() {
     echo " -h --help		Display usage"
     echo " --init=FILE		Specify custom init binary"
     echo " --add=FILE		Add file to initrd"
+    echo " --sysroot=PATH	Specify sysroot directory to collect files from"
 }
 
-VALID_ARGS=$(getopt -o h --long help,init:,add: -- "$@")
+VALID_ARGS=$(getopt -o h --long help,init:,add:,sysroot: -- "$@")
 if [[ $? -ne 0 ]]; then
     exit 1;
 fi
@@ -32,10 +34,14 @@ while [ : ]; do
         shift 2
         ;;
     --add)
-        if [ -f $2 ]; then
-            extra_files+=($2)
+        extra_files+=($2)
+        shift 2
+        ;;
+    --sysroot)
+        if [ -d $2 ]; then
+            SYSROOT="$2"
         else
-            echoerr "No such file $2"
+            echoerr "No such directory $2"
             exit 1
         fi
         shift 2
@@ -77,6 +83,10 @@ need_file() {
 
 add_file() {
     local file=$1
+    if [ ! -e $SYSROOT/$file ]; then
+        echoerr Missing expected file $SYSROOT/$file
+        exit 1
+    fi
     if [ "${filesDict[$file]}" != 1 ]; then
         add_parents $file
         filesDict[$file]=1
@@ -92,7 +102,7 @@ add_parents() {
     done
 }
 
-LIB_DIRS="/lib64 /lib /usr/lib64 /usr/lib"
+LIB_DIRS="$SYSROOT/lib64 $SYSROOT/lib $SYSROOT/usr/lib64 $SYSROOT/usr/lib"
 
 list_deps() {
     local file=$1
@@ -103,7 +113,7 @@ list_deps() {
             echoerr "Unable to find dependency $dep"
             exit 1
         fi
-        echo $deppath
+        echo ${deppath#$SYSROOT}
     done
 }
 
@@ -130,8 +140,8 @@ D=$(mktemp -d)
 
 # Add files
 for file in "${files[@]}"; do
-    echo $file;
-done | cpio -D /  -L -H newc -o -O $D/initrd
+    echo ${file#/};
+done | cpio -D $SYSROOT  -L -H newc -o -O $D/initrd
 
 # Add initrd
 cp $OSTREEINIT $D/init
