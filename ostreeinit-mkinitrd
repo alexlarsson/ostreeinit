@@ -3,6 +3,7 @@
 set -e
 
 OSTREEINIT="/usr/lib/ostreeinit/ostreeinit"
+extra_files=()
 
 usage() {
     if test "$#" -ne 0; then
@@ -11,11 +12,12 @@ usage() {
     fi
     echo "Usage: ostreeinit-mkinitrd [OPTION...] FILE"
     echo
-    echo " -h --help	Display usage"
-    echo " --init=FILE	Specify custom init binary"
+    echo " -h --help		Display usage"
+    echo " --init=FILE		Specify custom init binary"
+    echo " --add=FILE		Add file to initrd"
 }
 
-VALID_ARGS=$(getopt -o h --long help,init: -- "$@")
+VALID_ARGS=$(getopt -o h --long help,init:,add: -- "$@")
 if [[ $? -ne 0 ]]; then
     exit 1;
 fi
@@ -25,6 +27,15 @@ while [ : ]; do
   case "$1" in
     --init)
         OSTREEINIT="$2"
+        shift 2
+        ;;
+    --add)
+        if [ -f $2 ]; then
+            extra_files+=($2)
+        else
+            echo "No such file $2"
+            exit 1
+        fi
         shift 2
         ;;
     --) shift;
@@ -84,6 +95,9 @@ add_binary() {
     done
 }
 
+for file in "${extra_files[@]}"; do
+    add_file "$file"
+done
 
 add_file /proc
 add_file /sys
