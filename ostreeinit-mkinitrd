@@ -1,29 +1,92 @@
 #!/usr/bin/bash
 
+set -e
+
+OSTREEINIT="/usr/lib/ostreeinit/ostreeinit"
+extra_files=()
+SYSROOT=/
+
+echoerr() { echo "$@" 1>&2; }
+
+usage() {
+    if test "$#" -ne 0; then
+        echo "$@"
+        echo
+    fi
+    echo "Usage: ostreeinit-mkinitrd [OPTION...] FILE"
+    echo
+    echo " -h --help		Display usage"
+    echo " --init=FILE		Specify custom init binary"
+    echo " --add=FILE		Add file to initrd"
+    echo " --sysroot=PATH	Specify sysroot directory to collect files from"
+}
+
+VALID_ARGS=$(getopt -o h --long help,init:,add:,sysroot: -- "$@")
+if [[ $? -ne 0 ]]; then
+    exit 1;
+fi
+
+eval set -- "$VALID_ARGS"
+while [ : ]; do
+  case "$1" in
+    --init)
+        OSTREEINIT="$2"
+        shift 2
+        ;;
+    --add)
+        extra_files+=($2)
+        shift 2
+        ;;
+    --sysroot)
+        if [ -d $2 ]; then
+            SYSROOT="$2"
+        else
+            echoerr "No such directory $2"
+            exit 1
+        fi
+        shift 2
+        ;;
+    --) shift;
+        break
+        ;;
+    -h | --help)
+        usage
+        exit 0
+  esac
+done
+
+if [ "$#" -lt 1 ]; then
+    usage "Missing destination name"
+    exit 1
+fi
+
 DEST=$1
 shift
 
-OSTREEINIT="$1"
-if [ -z "$OSTREEINIT" ]; then
-    # Default to packaged file
-    OSTREEINIT="/usr/lib/ostreeinit/ostreeinit"
+if test "$#" -ne 0; then
+    usage "Unexpected commandline arguments: $@"
+    exit 1
 fi
-shift
-
-set -e
 
 BINS=/usr/lib/ostree/ostree-prepare-root
 
 files=()
 declare -A filesDict
 
-run_ldd() {
-    ldd $1 | grep "=>" | awk "{ print \$3 }"
-    ldd $1 | grep -v "=>" | grep ld-linux | awk "{ print \$1 }"
+need_file() {
+    local file=$1
+    if [ "${filesDict[$file]}" != 1 ]; then
+        return 0
+    fi
+    return 1
 }
 
 add_file() {
     local file=$1
+    if [ ! -e $SYSROOT/$file ]; then
+        echoerr Missing expected file $SYSROOT/$file
+        exit 1
+    fi
     if [ "${filesDict[$file]}" != 1 ]; then
         add_parents $file
         filesDict[$file]=1
@@ -39,31 +102,50 @@ add_parents() {
     done
 }
 
-add_binary() {
-    local bin=$1
-    add_file $bin
-    for dep in $(run_ldd $bin); do
-        add_file $dep
+LIB_DIRS="$SYSROOT/lib64 $SYSROOT/lib $SYSROOT/usr/lib64 $SYSROOT/usr/lib"
+
+list_deps() {
+    local file=$1
+    DEPS=$(readelf -d $file | grep "(NEEDED)" |  cut -d ":" -f 2 |  sed -e 's,\[,,g' -e 's,],,g' -e 's,[ ]*,,g')
+    for dep in $DEPS; do
+        local deppath=$(find -L $LIB_DIRS -name "${dep}" -maxdepth 1 -type f 2>/dev/null | head -1)
+        if [ "${deppath}" == "" ]; then
+            echoerr "Unable to find dependency $dep"
+            exit 1
+        fi
+        echo ${deppath#$SYSROOT}
     done
 }
 
-
-add_file /proc
-add_file /sys
-add_file /dev
-add_file /run
+add_binary() {
+    local bin=$1
+    add_file $bin
+    local deps=$(list_deps $bin)
+    for dep in $deps; do
+        if need_file $dep; then
+            add_binary $dep
+        fi
+    done
+}
 
 for bin in $BINS; do
     add_binary $bin
 done
 
-D=$(mktemp -d)
-cp $OSTREEINIT $D/init
+for file in "${extra_files[@]}"; do
+    add_file "$file"
+done
 
-echo init  | cpio -D $D  -H newc -o -O $D/initrd
+D=$(mktemp -d)
+
+# Add files
 for file in "${files[@]}"; do
-    echo $file;
-done | cpio -D /  -L -H newc -o -A -O $D/initrd
+    echo ${file#/};
+done | cpio -D $SYSROOT  -L -H newc -o -O $D/initrd
+
+# Add initrd
+cp $OSTREEINIT $D/init
+echo init  | cpio -D $D  -H newc -o -A -O $D/initrd
 
 lz4 -l -9 -c $D/initrd > $DEST
 
