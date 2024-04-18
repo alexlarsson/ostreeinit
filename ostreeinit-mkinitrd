@@ -1,16 +1,53 @@
 #!/usr/bin/bash
 
+set -e
+
+OSTREEINIT="/usr/lib/ostreeinit/ostreeinit"
+
+usage() {
+    if test "$#" -ne 0; then
+        echo "$@"
+        echo
+    fi
+    echo "Usage: ostreeinit-mkinitrd [OPTION...] FILE"
+    echo
+    echo " -h --help	Display usage"
+    echo " --init=FILE	Specify custom init binary"
+}
+
+VALID_ARGS=$(getopt -o h --long help,init: -- "$@")
+if [[ $? -ne 0 ]]; then
+    exit 1;
+fi
+
+eval set -- "$VALID_ARGS"
+while [ : ]; do
+  case "$1" in
+    --init)
+        OSTREEINIT="$2"
+        shift 2
+        ;;
+    --) shift;
+        break
+        ;;
+    -h | --help)
+        usage
+        exit 0
+  esac
+done
+
+if [ "$#" -lt 1 ]; then
+    usage "Missing destination name"
+    exit 1
+fi
+
 DEST=$1
 shift
 
-OSTREEINIT="$1"
-if [ -z "$OSTREEINIT" ]; then
-    # Default to packaged file
-    OSTREEINIT="/usr/lib/ostreeinit/ostreeinit"
+if test "$#" -ne 0; then
+    usage "Unexpected commandline arguments: $@"
+    exit 1
 fi
-shift
-
-set -e
 
 BINS=/usr/lib/ostree/ostree-prepare-root
 
