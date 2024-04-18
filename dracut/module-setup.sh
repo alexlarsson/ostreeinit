@@ -6,4 +6,8 @@ install() {
 
     # Don't install bash
     > "${initdir}/usr/bin/bash"
+
+    # Don't install vi and various deps
+    > "${initdir}/usr/libexec/vi"
 }
+
