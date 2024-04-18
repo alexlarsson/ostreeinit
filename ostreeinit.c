@@ -265,8 +265,7 @@ do_unmount (const char *oldmount)
 static void
 mount_apifs (const char *type, const char *dst, unsigned long mountflags, const char *options)
 {
-  debug ("mount(\"%s\", \"%s\", \"%s\", %ld, %s) %d (%s)\n", type, dst, type, mountflags, options,
-         errno, strerror (errno));
+  debug ("mount(\"%s\", \"%s\", \"%s\", %ld, %s)\n", type, dst, type, mountflags, options);
   if (mount (type, dst, type, mountflags, options) < 0)
     fatal ("mount of %s failed: %s\n", type, strerror (errno));
 }
@@ -357,6 +356,13 @@ main (int argc, char *argv[])
 {
   (void)argv;
 
+  const char *dirs[] = { "/sysroot", "/proc", "/sys", "/dev", "/run", NULL };
+  for (int i = 0; dirs[i] != NULL; i++)
+    {
+      if (mkdir (dirs[i], 0755) < 0 && errno != EEXIST)
+        klog ("Failed to mkdir '%s': %s\n", dirs[i], strerror (errno));
+    }
+
   mount_apifs ("devtmpfs", "/dev", MS_NOSUID | MS_STRICTATIME, "mode=0755,size=4m");
 
   autofclose FILE *kmsg_f_scoped = NULL;
@@ -366,9 +372,6 @@ main (int argc, char *argv[])
   mount_apifs ("proc", "/proc", MS_NOSUID | MS_NOEXEC | MS_NODEV, NULL);
   mount_apifs ("sysfs", "/sys", MS_NOSUID | MS_NOEXEC | MS_NODEV, NULL);
   mount_apifs ("tmpfs", "/run", MS_NOSUID | MS_NODEV, "mode=0755,size=64m");
-
-  if (mkdir ("/sysroot", 0755) < 0)
-    klog ("Failed to mkdir sysroot: %s\n", strerror (errno));
 
   autofree char *cmdline = read_proc_cmdline ();
   autofree char *root = find_proc_cmdline_key (cmdline, "ostreeinit.root");

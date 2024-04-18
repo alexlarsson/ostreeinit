@@ -99,11 +99,6 @@ for file in "${extra_files[@]}"; do
     add_file "$file"
 done
 
-add_file /proc
-add_file /sys
-add_file /dev
-add_file /run
-
 for bin in $BINS; do
     add_binary $bin
 done
