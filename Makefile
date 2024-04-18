@@ -4,7 +4,7 @@ VERSION=0.1
 
 LIBDIR?=/usr/lib/ostreeinit
 BINDIR?=/usr/bin
-CFLAGS?=-O2 -Wall
+CFLAGS?=-O2 -Wall -g
 
 ostreeinit: ostreeinit.c
 	gcc $(CFLAGS) ostreeinit.c -o ostreeinit
