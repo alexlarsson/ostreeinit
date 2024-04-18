@@ -5,6 +5,8 @@ set -e
 OSTREEINIT="/usr/lib/ostreeinit/ostreeinit"
 extra_files=()
 
+echoerr() { echo "$@" 1>&2; }
+
 usage() {
     if test "$#" -ne 0; then
         echo "$@"
@@ -33,7 +35,7 @@ while [ : ]; do
         if [ -f $2 ]; then
             extra_files+=($2)
         else
-            echo "No such file $2"
+            echoerr "No such file $2"
             exit 1
         fi
         shift 2
@@ -65,9 +67,12 @@ BINS=/usr/lib/ostree/ostree-prepare-root
 files=()
 declare -A filesDict
 
-run_ldd() {
-    ldd $1 | grep "=>" | awk "{ print \$3 }"
-    ldd $1 | grep -v "=>" | grep ld-linux | awk "{ print \$1 }"
+need_file() {
+    local file=$1
+    if [ "${filesDict[$file]}" != 1 ]; then
+        return 0
+    fi
+    return 1
 }
 
 add_file() {
@@ -87,20 +92,38 @@ add_parents() {
     done
 }
 
-add_binary() {
-    local bin=$1
-    add_file $bin
-    for dep in $(run_ldd $bin); do
-        add_file $dep
+LIB_DIRS="/lib64 /lib /usr/lib64 /usr/lib"
+
+list_deps() {
+    local file=$1
+    DEPS=$(readelf -d $file | grep "(NEEDED)" |  cut -d ":" -f 2 |  sed -e 's,\[,,g' -e 's,],,g' -e 's,[ ]*,,g')
+    for dep in $DEPS; do
+        local deppath=$(find -L $LIB_DIRS -name "${dep}" -maxdepth 1 -type f 2>/dev/null | head -1)
+        if [ "${deppath}" == "" ]; then
+            echoerr "Unable to find dependency $dep"
+            exit 1
+        fi
+        echo $deppath
     done
 }
 
-for file in "${extra_files[@]}"; do
-    add_file "$file"
-done
+add_binary() {
+    local bin=$1
+    add_file $bin
+    local deps=$(list_deps $bin)
+    for dep in $deps; do
+        if need_file $dep; then
+            add_binary $dep
+        fi
+    done
+}
 
 for bin in $BINS; do
     add_binary $bin
+done
+
+for file in "${extra_files[@]}"; do
+    add_file "$file"
 done
 
 D=$(mktemp -d)
