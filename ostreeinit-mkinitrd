@@ -4,7 +4,14 @@ set -e
 
 OSTREEINIT="/usr/lib/ostreeinit/ostreeinit"
 extra_files=()
+copy_files_src=()
+copy_files_dst=()
 SYSROOT=/
+
+add_copy() {
+    copy_files_dst+=($1)
+    copy_files_src+=($2)
+}
 
 echoerr() { echo "$@" 1>&2; }
 
@@ -17,11 +24,12 @@ usage() {
     echo
     echo " -h --help		Display usage"
     echo " --init=FILE		Specify custom init binary"
-    echo " --add=FILE		Add file to initrd"
+    echo " --add=FILE		Add file (from sysroot) to initrd, optionally with custom name in initrd"
+    echo " --copy=FILE:DST	Copy file (not in sysroot) to initrd, with custom name"
     echo " --sysroot=PATH	Specify sysroot directory to collect files from"
 }
 
-VALID_ARGS=$(getopt -o h --long help,init:,add:,sysroot: -- "$@")
+VALID_ARGS=$(getopt -o h --long help,init:,add:,sysroot:,copy: -- "$@")
 if [[ $? -ne 0 ]]; then
     exit 1;
 fi
@@ -35,6 +43,12 @@ while [ : ]; do
         ;;
     --add)
         extra_files+=($2)
+        shift 2
+        ;;
+    --copy)
+        SRCDST="$2"
+        arrSRCDST=(${SRCDST//:/ })
+        add_copy "${arrSRCDST[0]}" "${arrSRCDST[1]}"
         shift 2
         ;;
     --sysroot)
@@ -71,6 +85,7 @@ fi
 BINS=/usr/lib/ostree/ostree-prepare-root
 
 files=()
+newfile=()
 declare -A filesDict
 
 need_file() {
@@ -83,21 +98,24 @@ need_file() {
 
 add_file() {
     local file=$1
-    if [ ! -e $SYSROOT/$file ]; then
-        echoerr Missing expected file $SYSROOT/$file
+    local root=${2:-$SYSROT}
+    if [ ! -e $root/$file ]; then
+        echoerr Missing expected file $root/$file
         exit 1
     fi
     if [ "${filesDict[$file]}" != 1 ]; then
-        add_parents $file
+        add_parents $file $root
         filesDict[$file]=1
         files+=($file)
+        newfiles+=($file)
     fi
 }
 
 add_parents() {
     local p=$(dirname $1)
+    local root=${2:-$SYSROT}
     while [ "$p" != "/" ]; do
-        add_file $p
+        add_file $p $root
         p=$(dirname $p)
     done
 }
@@ -140,12 +158,35 @@ D=$(mktemp -d)
 
 # Add files
 for file in "${files[@]}"; do
-    echo ${file#/};
+    echo $(realpath -s -m --relative-to=/ $file)
 done | cpio -D $SYSROOT  -L -H newc -o -O $D/initrd
 
 # Add initrd
-cp $OSTREEINIT $D/init
-echo init  | cpio -D $D  -H newc -o -A -O $D/initrd
+add_copy /init $OSTREEINIT
+
+# Reset newfiles so we can get an incremental list to copy
+newfiles=()
+
+mkdir $D/rootfs
+for i in "${!copy_files_dst[@]}"; do
+    dst="${copy_files_dst[$i]}"
+    src="${copy_files_src[$i]}"
+
+    if [ ! -e $src ]; then
+        echoerr "Missing --copy source  $src"
+        exit 1
+    fi
+
+    mkdir -p $D/rootfs/$(dirname $dst)
+    cp $src $D/rootfs/$dst
+    add_file $dst $D/rootfs
+done
+
+for file in "${newfiles[@]}"; do
+    echo ${file#/};
+done | cpio -D $D/rootfs  -L -H newc -o -A -R 0:0 -O $D/initrd
+
+
 
 lz4 -l -9 -c $D/initrd > $DEST
 
