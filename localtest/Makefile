@@ -12,10 +12,8 @@ ${KERNEL}:
 	echo Extract the kernel from ${IMAGE} and save it here as ${KERNEL}
 	exit 1
 
-ostree-initrd.img: ostreeinit ostreeinit-mkinitrd prepare-root.conf
-	./ostreeinit-mkinitrd --init=ostreeinit --copy=/usr/lib/ostree/prepare-root.conf:prepare-root.conf ostree-initrd.img
+ostree-initrd.img: ../build/ostreeinit ostreeinit-mkinitrd prepare-root.conf
+	./ostreeinit-mkinitrd --init=../build/ostreeinit --copy=/usr/lib/ostree/prepare-root.conf:prepare-root.conf ostree-initrd.img
 
 run: ${IMAGE} ${KERNEL}  ostree-initrd.img
 	qemu-system-x86_64 -nographic -kernel ${KERNEL} -initrd ostree-initrd.img -enable-kvm -m 2G -cpu host -drive file=${IMAGE},index=0,media=disk,format=qcow2,if=virtio,snapshot=off -append ${KARGS}
-
-include Makefile
