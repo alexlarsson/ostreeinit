@@ -2,8 +2,8 @@ Name:           ostreeinit
 Version:        @@VERSION@@
 Release:        1%{?dist}
 Summary:        Minimal ostree-based initrd
-
-License:        MIT
+URL:            https://github.com/alexlarsson/ostreeinit
+License:        LGPL-2.0-or-later
 Source0:        ostreeinit-%{version}.tar.xz
 
 BuildRequires:  meson
