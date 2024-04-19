@@ -1,4 +1,4 @@
-image.qcow2
-ostreeinit
-ostree-initrd.img
-vmlinuz
+localtest/image.qcow2
+build
+localtest/ostree-initrd.img
+localtest/vmlinuz
