@@ -135,7 +135,6 @@ xstrdup (const char *str)
 static void
 fork_execvp (char **args)
 {
-  debug ("fork_execvp(%s)\n", args[0]);
   const pid_t pid = fork ();
   if (pid == -1)
     fatal ("fail execvp_no_wait\n");
@@ -250,7 +249,6 @@ switchroot (const char *newroot)
 static void
 do_move_mount (const char *oldmount, const char *newmount)
 {
-  debug ("mount(\"%s\", \"%s\", NULL, MS_MOVE, NULL)\n", oldmount, newmount);
   if (mount (oldmount, newmount, NULL, MS_MOVE, NULL) < 0)
     fatal ("failed to mount moving %s to %s, forcing unmount\n", oldmount, newmount);
 }
@@ -265,7 +263,6 @@ do_unmount (const char *oldmount)
 static void
 mount_apifs (const char *type, const char *dst, unsigned long mountflags, const char *options)
 {
-  debug ("mount(\"%s\", \"%s\", \"%s\", %ld, %s)\n", type, dst, type, mountflags, options);
   if (mount (type, dst, type, mountflags, options) < 0)
     fatal ("mount of %s failed: %s\n", type, strerror (errno));
 }
@@ -395,11 +392,15 @@ main (int argc, char *argv[])
   log_open_kmsg ();
   kmsg_f_scoped = kmsg_f;
 
+  debug ("mounting api fs\n");
+
   mount_apifs ("proc", "/proc", MS_NOSUID | MS_NOEXEC | MS_NODEV, NULL);
   mount_apifs ("sysfs", "/sys", MS_NOSUID | MS_NOEXEC | MS_NODEV, NULL);
   mount_apifs ("tmpfs", "/run", MS_NOSUID | MS_NODEV, "mode=0755,size=64m");
 
   autofree char *cmdline = read_proc_cmdline ();
+  autofree char *shellat = find_proc_cmdline_key (cmdline, "ostreeinit.shellat");
+
   autofree char *root = find_proc_cmdline_key (cmdline, "ostreeinit.root");
   if (!root)
     fatal ("Can't find ostreeinit.root= kernel commandline argument");
@@ -414,12 +415,17 @@ main (int argc, char *argv[])
   int sysroot_mount_flags = 0;
   if (!has_proc_cmdline_flag (cmdline, "ostreeinit.rw"))
     sysroot_mount_flags |= MS_RDONLY;
+  debug ("Mounting /sysroot from %s (%s)\n", root,
+         ((sysroot_mount_flags & MS_RDONLY) != 0) ? "readonly" : "readwrite");
   if (mount (root, "/sysroot", rootfstype, sysroot_mount_flags, NULL) != 0)
     fatal ("Failed to mount %s at sysroot (fs %s, flags: %d): %s\n", root, rootfstype,
            sysroot_mount_flags, strerror (errno));
 
+  debug ("Starting ostree-prepare-root\n");
   char *arg[] = { "/usr/lib/ostree/ostree-prepare-root", "/sysroot", NULL };
   fork_execvp (arg);
+
+  debug ("Switching to /sysroot\n");
 
   // We need to keep /run alive to make /run/ostree-booted survive
   do_move_mount ("/run", "/sysroot/run");
@@ -430,8 +436,10 @@ main (int argc, char *argv[])
 
   switchroot ("/sysroot");
 
-  // execl_single_arg("/bin/bash");
+  if (shellat != NULL && strcmp (shellat, "init") == 0)
+    execl_single_arg ("/bin/bash");
 
+  debug ("Starting real init\n");
   exec_init ();
 
   return 0;
