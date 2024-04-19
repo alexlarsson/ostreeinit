@@ -34,4 +34,4 @@ ostreeinit = executable('ostreeinit', ostreeinit_sources,
 
 install_data('dracut/module-setup.sh', install_dir : join_paths(ostreeinit_dracut_moduledir, '50ostreeinit'))
 
-meson.add_dist_script('dist.sh', meson.project_version())
+meson.add_dist_script('tools/dist.sh', meson.project_version())
