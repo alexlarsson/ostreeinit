@@ -1,5 +1,5 @@
 Name:           ostreeinit
-Version:        0.1.0
+Version:        @@VERSION@@
 Release:        1%{?dist}
 Summary:        Minimal ostree-based initrd
 

@@ -20,9 +20,6 @@ configure_file(
   output: 'ostreeinit-config.h',
   configuration: config_h,
 )
-add_project_arguments([
-  '-I' + meson.build_root(),
-], language: 'c')
 
 add_project_arguments('-D_GNU_SOURCE', language: 'c')
 
@@ -36,3 +33,5 @@ ostreeinit = executable('ostreeinit', ostreeinit_sources,
 )
 
 install_data('dracut/module-setup.sh', install_dir : join_paths(ostreeinit_dracut_moduledir, '50ostreeinit'))
+
+meson.add_dist_script('dist.sh', meson.project_version())
