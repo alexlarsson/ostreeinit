@@ -1,6 +1,4 @@
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
+#include <ostreeinit-config.h>
 
 #include <assert.h>
 #include <dirent.h>
@@ -20,9 +18,7 @@
 #include <sys/vfs.h>
 #include <sys/wait.h>
 
-#if 1
-#define DEBUG
-#endif
+#define _unused __attribute__ ((unused))
 
 #define autofree __attribute__ ((cleanup (cleanup_free)))
 #define autofree_str __attribute__ ((cleanup (cleanup_free_str)))
@@ -95,9 +91,9 @@ klog (const char *format, ...)
 }
 
 __attribute__ ((__format__ (printf, 1, 2))) static void
-debug (const char *format, ...)
+debug (_unused const char *format, ...)
 {
-#ifdef DEBUG
+#ifdef DEBUG_PRINT
   va_list args;
   va_start (args, format);
   klogv (format, args);
@@ -152,7 +148,7 @@ fork_execvp (char **args)
 /* remove all files/directories below dirName -- don't cross mountpoints */
 /* Closes the fd, via fdopendir */
 static int
-recursive_rm (int dfd, int st_dev)
+recursive_rm (int dfd, dev_t st_dev)
 {
   int result = 0;
   autoclosedir DIR *dir = fdopendir (dfd);
@@ -375,9 +371,8 @@ has_proc_cmdline_flag (const char *cmdline, const char *key)
 }
 
 int
-main (int argc, char *argv[])
+main (_unused int argc, _unused char *argv[])
 {
-  (void)argv;
 
   const char *dirs[] = { "/sysroot", "/proc", "/sys", "/dev", "/run", NULL };
   for (int i = 0; dirs[i] != NULL; i++)
