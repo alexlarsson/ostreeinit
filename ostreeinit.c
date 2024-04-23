@@ -419,9 +419,14 @@ main (_unused int argc, _unused char *argv[])
     fatal ("Failed to mount %s at sysroot (fs %s, flags: %d): %s\n", root, rootfstype,
            sysroot_mount_flags, strerror (errno));
 
-  debug ("Starting ostree-prepare-root\n");
-  char *arg[] = { "/usr/lib/ostree/ostree-prepare-root", "/sysroot", NULL };
-  fork_execvp (arg);
+  autofree char *ostree = find_proc_cmdline_key (cmdline, "ostree");
+
+  if (ostree)
+    {
+      debug ("Starting ostree-prepare-root\n");
+      char *arg[] = { "/usr/lib/ostree/ostree-prepare-root", "/sysroot", NULL };
+      fork_execvp (arg);
+    }
 
   debug ("Switching to /sysroot\n");
 
