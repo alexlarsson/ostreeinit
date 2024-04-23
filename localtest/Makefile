@@ -1,7 +1,7 @@
 IMAGE=image.qcow2
 KERNEL=vmlinuz
 OSTREE_DEPLOYMENT=0b257ba185126d152559cb7395bb9dde2bc4a600687264facd600eebe504eca5
-KARGS="loglevel=6 console=ttyS0  ostreeinit.root=/dev/vda3 ostreeinit.rootfstype=ext4 ostree=/ostree/boot.1/centos/${OSTREE_DEPLOYMENT}/0 ostreeinit.rw ostreeinit.debug"
+KARGS="loglevel=6 console=ttyS0  autoinit.root=/dev/vda3 autoinit.rootfstype=ext4 ostree=/ostree/boot.1/centos/${OSTREE_DEPLOYMENT}/0 autoinit.rw autoinit.debug"
 
 ${IMAGE}:
 	echo Build an image (e.g. cs9-qemu-developer-ostree.x86_64.qcow2) and save it here as ${IMAGE}
@@ -12,8 +12,8 @@ ${KERNEL}:
 	echo Extract the kernel from ${IMAGE} and save it here as ${KERNEL}
 	exit 1
 
-ostree-initrd.img: ../build/ostreeinit ostreeinit-mkinitrd prepare-root.conf
-	./ostreeinit-mkinitrd --init=../build/ostreeinit --copy=/usr/lib/ostree/prepare-root.conf:prepare-root.conf ostree-initrd.img
+auto-initrd.img: ../build/autoinit autoinit-mkinitrd prepare-root.conf
+	./autoinit-mkinitrd --init=../build/autoinit --copy=/usr/lib/ostree/prepare-root.conf:prepare-root.conf auto-initrd.img
 
-run: ${IMAGE} ${KERNEL}  ostree-initrd.img
-	qemu-system-x86_64 -nographic -kernel ${KERNEL} -initrd ostree-initrd.img -enable-kvm -m 2G -cpu host -drive file=${IMAGE},index=0,media=disk,format=qcow2,if=virtio,snapshot=off -append ${KARGS}
+run: ${IMAGE} ${KERNEL}  auto-initrd.img
+	qemu-system-x86_64 -nographic -kernel ${KERNEL} -initrd auto-initrd.img -enable-kvm -m 2G -cpu host -drive file=${IMAGE},index=0,media=disk,format=qcow2,if=virtio,snapshot=off -append ${KARGS}

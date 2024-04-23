@@ -2,5 +2,5 @@
 
 install() {
     inst /usr/lib/ostree/ostree-prepare-root
-    inst /usr/lib/ostreeinit/ostreeinit /init
+    inst /usr/lib/autoinit/autoinit /init
 }

@@ -1,4 +1,4 @@
-#include <ostreeinit-config.h>
+#include <autoinit-config.h>
 
 #include <assert.h>
 #include <dirent.h>
@@ -57,7 +57,7 @@ cleanup_closedir (DIR **dir)
 
 static FILE *kmsg_f = 0;
 
-#define LOG_PREFIX "ostreeinit: "
+#define LOG_PREFIX "autoinit: "
 #define LOG_PREFIX_LEN strlen (LOG_PREFIX)
 
 static void
@@ -392,26 +392,26 @@ main (_unused int argc, _unused char *argv[])
   mount_apifs ("proc", "/proc", MS_NOSUID | MS_NOEXEC | MS_NODEV, NULL);
 
   autofree char *cmdline = read_proc_cmdline ();
-  enable_debug = has_proc_cmdline_flag (cmdline, "ostreeinit.debug");
-  autofree char *shellat = find_proc_cmdline_key (cmdline, "ostreeinit.shellat");
-  autofree char *root = find_proc_cmdline_key (cmdline, "ostreeinit.root");
+  enable_debug = has_proc_cmdline_flag (cmdline, "autoinit.debug");
+  autofree char *shellat = find_proc_cmdline_key (cmdline, "autoinit.shellat");
+  autofree char *root = find_proc_cmdline_key (cmdline, "autoinit.root");
   if (!root)
-    fatal ("Can't find ostreeinit.root= kernel commandline argument");
+    fatal ("Can't find autoinit.root= kernel commandline argument");
 
   debug ("mounting API filesystems\n");
 
   mount_apifs ("sysfs", "/sys", MS_NOSUID | MS_NOEXEC | MS_NODEV, NULL);
   mount_apifs ("tmpfs", "/run", MS_NOSUID | MS_NODEV, "mode=0755,size=64m");
 
-  autofree char *rootfstype = find_proc_cmdline_key (cmdline, "ostreeinit.rootfstype");
+  autofree char *rootfstype = find_proc_cmdline_key (cmdline, "autoinit.rootfstype");
   if (!rootfstype)
     {
-      klog ("Can't find ostreeinit.rootfstype= kernel commandline argument, assuming ext4");
+      klog ("Can't find autoinit.rootfstype= kernel commandline argument, assuming ext4");
       rootfstype = xstrdup ("ext4");
     }
 
   int sysroot_mount_flags = 0;
-  if (!has_proc_cmdline_flag (cmdline, "ostreeinit.rw"))
+  if (!has_proc_cmdline_flag (cmdline, "autoinit.rw"))
     sysroot_mount_flags |= MS_RDONLY;
   debug ("Mounting /sysroot from %s (%s)\n", root,
          ((sysroot_mount_flags & MS_RDONLY) != 0) ? "readonly" : "readwrite");

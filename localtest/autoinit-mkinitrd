@@ -2,7 +2,7 @@
 
 set -e
 
-OSTREEINIT="/usr/lib/ostreeinit/ostreeinit"
+AUTOINIT="/usr/lib/autoinit/autoinit"
 extra_files=()
 copy_files_src=()
 copy_files_dst=()
@@ -20,7 +20,7 @@ usage() {
         echo "$@"
         echo
     fi
-    echo "Usage: ostreeinit-mkinitrd [OPTION...] FILE"
+    echo "Usage: autoinit-mkinitrd [OPTION...] FILE"
     echo
     echo " -h --help		Display usage"
     echo " --init=FILE		Specify custom init binary"
@@ -38,7 +38,7 @@ eval set -- "$VALID_ARGS"
 while [ : ]; do
   case "$1" in
     --init)
-        OSTREEINIT="$2"
+        AUTOINIT="$2"
         shift 2
         ;;
     --add)
@@ -162,7 +162,7 @@ for file in "${files[@]}"; do
 done | cpio -D $SYSROOT  -L -H newc -o -O $D/initrd
 
 # Add initrd
-add_copy /init $OSTREEINIT
+add_copy /init $AUTOINIT
 
 # Reset newfiles so we can get an incremental list to copy
 newfiles=()

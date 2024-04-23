@@ -1,4 +1,4 @@
 localtest/image.qcow2
 build
-localtest/ostree-initrd.img
+localtest/auto-initrd.img
 localtest/vmlinuz

@@ -1,17 +1,17 @@
-Name:           ostreeinit
+Name:           autoinit
 Version:        @@VERSION@@
 Release:        1%{?dist}
-Summary:        Minimal ostree-based initrd
+Summary:        Minimal automotive initrd
 URL:            https://github.com/alexlarsson/ostreeinit
 License:        LGPL-2.0-or-later
-Source0:        ostreeinit-%{version}.tar.xz
+Source0:        autoinit-%{version}.tar.xz
 
 BuildRequires:  meson
 BuildRequires:  gcc
 Requires:       ostree
 
 %description
-Minimal ostree-based initrd
+Minimal automotive initrd
 
 %prep
 %autosetup
@@ -27,8 +27,8 @@ Minimal ostree-based initrd
 %meson_install
 
 %files
-%{_prefix}/lib/dracut/modules.d/50ostreeinit
-%{_prefix}/lib/ostreeinit/ostreeinit
+%{_prefix}/lib/dracut/modules.d/50autoinit
+%{_prefix}/lib/autoinit/autoinit
 
 %changelog
 * Thu Apr 18 2024 Alexander Larsson <alexl@redhat.com>

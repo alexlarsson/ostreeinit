@@ -1,6 +1,6 @@
-# ostreeinit
+# autoinit
 
-ostreeinit is an experimental minimal initrd for ostree use. It builds
+autoinit is an experimental minimal initrd for ostree use. It builds
 a single-executable init process with the only task of mounting the
 sysroot, running ostree-prepare-root to mount the ostree root and then
 switchroot into that and boot it.
@@ -15,18 +15,18 @@ custom code earlier than after the main systemd starts.
 
 ## Usage
 
-The expected usage is to install ostree and ostreeinit in the build
-environment, and then run `dracut -m ostreeinit` (i.e. dracut with
-only the ostreeinit module) to produce an initrd file. This can then
+The expected usage is to install ostree and autoinit in the build
+environment, and then run `dracut -m autoinit` (i.e. dracut with
+only the autoinit module) to produce an initrd file. This can then
 be used to boot the system by specifying the required arguments on the
 kernel command line.
 
 The supported kernel args are:
- * `ostreeinit.root=...` - The device node to mount the rootfs from (e.g. root=/dev/vda3). This is required.
- * `ostreeinit.rootfstype=...` - The filesystem type used in the mount, if unspecified `rootfs=ext4` is used.
- * `ostreeinit.rw` - If this is set, /sysroot is mounted read-write.
- * `ostreeinit.debug` - If this is set, ostreeinit will print out some debug info
- * `ostreeinit.shellat=init` - If this is set to `init`, ostreeinit will start a bash instead of sysroot init
+ * `autoinit.root=...` - The device node to mount the rootfs from (e.g. root=/dev/vda3). This is required.
+ * `autoinit.rootfstype=...` - The filesystem type used in the mount, if unspecified `rootfs=ext4` is used.
+ * `autoinit.rw` - If this is set, /sysroot is mounted read-write.
+ * `autoinit.debug` - If this is set, autoinit will print out some debug info
+ * `autoinit.shellat=init` - If this is set to `init`, autoinit will start a bash instead of sysroot init
 
 In addition, ostree-prepare-root needs the standard `ostree=` argument
 to be set, so that ostree can tell what deploy to boot.
@@ -38,7 +38,7 @@ make it easy to test-boot an image.
 
 In the localtest directory, put an ostree-based vm image as
 `image.qcow2`, and extract the kernel used as `vmlinux` and the
-deployment id used. Then you can test ostreeinit like so:
+deployment id used. Then you can test autoinit like so:
 
 ```
 $ mkdir -p build
