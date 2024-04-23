@@ -26,6 +26,8 @@
 #define autofclose __attribute__ ((cleanup (cleanup_fclose)))
 #define autoclosedir __attribute__ ((cleanup (cleanup_closedir)))
 
+static bool enable_debug = false;
+
 static inline void
 cleanup_free (void *p)
 {
@@ -93,12 +95,13 @@ klog (const char *format, ...)
 __attribute__ ((__format__ (printf, 1, 2))) static void
 debug (_unused const char *format, ...)
 {
-#ifdef DEBUG_PRINT
-  va_list args;
-  va_start (args, format);
-  klogv (format, args);
-  va_end (args);
-#endif
+  if (enable_debug)
+    {
+      va_list args;
+      va_start (args, format);
+      klogv (format, args);
+      va_end (args);
+    }
 }
 
 __attribute__ ((__noreturn__)) __attribute__ ((__format__ (printf, 1, 2))) static void
@@ -280,7 +283,6 @@ log_open_kmsg (void)
 static void
 execl_single_arg (const char *exe)
 {
-  debug ("execl_single_arg(\"%s\")\n", exe);
   execl (exe, exe, (char *)NULL);
 }
 
@@ -387,18 +389,19 @@ main (_unused int argc, _unused char *argv[])
   log_open_kmsg ();
   kmsg_f_scoped = kmsg_f;
 
-  debug ("mounting api fs\n");
-
   mount_apifs ("proc", "/proc", MS_NOSUID | MS_NOEXEC | MS_NODEV, NULL);
-  mount_apifs ("sysfs", "/sys", MS_NOSUID | MS_NOEXEC | MS_NODEV, NULL);
-  mount_apifs ("tmpfs", "/run", MS_NOSUID | MS_NODEV, "mode=0755,size=64m");
 
   autofree char *cmdline = read_proc_cmdline ();
+  enable_debug = has_proc_cmdline_flag (cmdline, "ostreeinit.debug");
   autofree char *shellat = find_proc_cmdline_key (cmdline, "ostreeinit.shellat");
-
   autofree char *root = find_proc_cmdline_key (cmdline, "ostreeinit.root");
   if (!root)
     fatal ("Can't find ostreeinit.root= kernel commandline argument");
+
+  debug ("mounting API filesystems\n");
+
+  mount_apifs ("sysfs", "/sys", MS_NOSUID | MS_NOEXEC | MS_NODEV, NULL);
+  mount_apifs ("tmpfs", "/run", MS_NOSUID | MS_NODEV, "mode=0755,size=64m");
 
   autofree char *rootfstype = find_proc_cmdline_key (cmdline, "ostreeinit.rootfstype");
   if (!rootfstype)

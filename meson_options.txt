@@ -1,4 +1,0 @@
-option('debug_print',
-       description: 'Enable debug output',
-       type: 'boolean',
-       value: false)

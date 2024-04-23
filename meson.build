@@ -14,7 +14,6 @@ ostreeinit_dracut_moduledir = join_paths(ostreeinit_prefix, 'lib/dracut/modules.
 
 config_h = configuration_data()
 config_h.set_quoted('PACKAGE_VERSION', meson.project_version())
-config_h.set('DEBUG_PRINT', get_option('debug_print'))
 
 configure_file(
   output: 'ostreeinit-config.h',
