@@ -22,9 +22,11 @@ be used to boot the system by specifying the required arguments on the
 kernel command line.
 
 The supported kernel args are:
- * ostreeinit.root= - The device node to mount the rootfs from (e.g. root=/dev/vda3). This is required.
- * ostreeinit.rootfstype= - The filesystem type used in the mount, if unspecified `rootfs=ext4` is used.
- * ostreeinit.rw - If this is set, /sysroot is mounted read-write.
+ * `ostreeinit.root=...` - The device node to mount the rootfs from (e.g. root=/dev/vda3). This is required.
+ * `ostreeinit.rootfstype=...` - The filesystem type used in the mount, if unspecified `rootfs=ext4` is used.
+ * `ostreeinit.rw` - If this is set, /sysroot is mounted read-write.
+ * `ostreeinit.debug` - If this is set, ostreeinit will print out some debug info
+ * `ostreeinit.shellat=init` - If this is set to `init`, ostreeinit will start a bash instead of sysroot init
 
 In addition, ostree-prepare-root needs the standard `ostree=` argument
 to be set, so that ostree can tell what deploy to boot.
