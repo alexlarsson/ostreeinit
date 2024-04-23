@@ -240,6 +240,8 @@ switchroot (const char *newroot)
   if (fstat (cfd, &rb))
     fatal ("stat failed\n");
 
+  debug ("Purging files on initramfs\n");
+
   /* We ignore errors here, that just means some leaks, its not fatal */
   recursive_rm (cfd, rb.st_dev);
   cfd = -1; /* The fd is closed by recursive_rm */
@@ -428,14 +430,19 @@ main (_unused int argc, _unused char *argv[])
       fork_execvp (arg);
     }
 
-  debug ("Switching to /sysroot\n");
+  debug ("Moving /run mount point\n");
 
   // We need to keep /run alive to make /run/ostree-booted survive
   do_move_mount ("/run", "/sysroot/run");
+
+  debug ("Unmounting /dev, /proc, and /sys\n");
+
   // Other mounts are better redone in systemd in case there are any special requirements
   do_unmount ("/dev");
   do_unmount ("/proc");
   do_unmount ("/sys");
+
+  debug ("Switching to /sysroot\n");
 
   switchroot ("/sysroot");
 
