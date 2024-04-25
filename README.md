@@ -1,3 +1,5 @@
+# This has now moved to https://gitlab.com/CentOS/automotive/src/autoinit
+
 # autoinit
 
 autoinit is an experimental minimal initrd for ostree use. It builds
