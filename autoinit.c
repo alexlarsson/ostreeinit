@@ -119,7 +119,7 @@ fatal (const char *format, ...)
 __attribute__ ((__noreturn__)) static void
 oom ()
 {
-  fatal ("Out of memory");
+  fatal ("Out of memory\n");
 }
 
 static char *
@@ -221,11 +221,11 @@ static void
 switchroot (const char *newroot)
 {
   if (chdir (newroot))
-    fatal ("failed to change directory to %s", newroot);
+    fatal ("failed to change directory to %s\n", newroot);
 
   autoclose int cfd = open ("/", O_RDONLY | O_CLOEXEC);
   if (cfd < 0)
-    fatal ("cannot open %s", "/");
+    fatal ("cannot open %s\n", "/");
 
   if (mount (newroot, "/", NULL, MS_MOVE, NULL) < 0)
     fatal ("failed to mount moving %s to /\n", newroot);
@@ -302,7 +302,7 @@ read_proc_cmdline (void)
 {
   autofclose FILE *f = fopen ("/proc/cmdline", "r");
   if (!f)
-    fatal ("Failed to open /proc/cmdline");
+    fatal ("Failed to open /proc/cmdline\n");
 
   char *cmdline = NULL;
   size_t len;
@@ -311,7 +311,7 @@ read_proc_cmdline (void)
    * will fail unelss we provide a length.
    */
   if (getline (&cmdline, &len, f) < 0)
-    fatal ("Failed to read /proc/cmdline");
+    fatal ("Failed to read /proc/cmdline\n");
 
   /* ... but the length will be the size of the malloc buffer, not
    * strlen().  Fix that.
@@ -398,7 +398,7 @@ main (_unused int argc, _unused char *argv[])
   autofree char *shellat = find_proc_cmdline_key (cmdline, "autoinit.shellat");
   autofree char *root = find_proc_cmdline_key (cmdline, "autoinit.root");
   if (!root)
-    fatal ("Can't find autoinit.root= kernel commandline argument");
+    fatal ("Can't find autoinit.root= kernel commandline argument\n");
 
   debug ("mounting API filesystems\n");
 
@@ -408,7 +408,7 @@ main (_unused int argc, _unused char *argv[])
   autofree char *rootfstype = find_proc_cmdline_key (cmdline, "autoinit.rootfstype");
   if (!rootfstype)
     {
-      klog ("Can't find autoinit.rootfstype= kernel commandline argument, assuming ext4");
+      klog ("Can't find autoinit.rootfstype= kernel commandline argument, assuming ext4\n");
       rootfstype = xstrdup ("ext4");
     }
 
